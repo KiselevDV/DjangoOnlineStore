@@ -8,7 +8,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import models
 
-from .exceptions import MinResolutionErrorException, MaxResolutionErrorException
+from .exceptions import (
+    MinResolutionErrorException, MaxResolutionErrorException, )
+from .utilites import get_product_url
 
 User = get_user_model()  # settings.AUTH_USER_MODEL
 
@@ -49,7 +51,7 @@ class LatestProductsManager:
 
 class LatestProducts:
     """
-    Вывод последних товаров без привязки к конкретной модели.
+    Вывод последних товаров, без привязки к конкретной модели.
     LatestProductsManager - менеджер от ContentType -
     позволяет работать с любой моделью
     """
@@ -73,8 +75,8 @@ class Product(models.Model):
     """Продукт. Абстрактный класс"""
 
     # Константы для валидации размеров картинок
-    MIN_VALID_RESOLUTION = (400, 400)
-    MAX_VALID_RESOLUTION = (800, 800)
+    MIN_VALID_RESOLUTION = (300, 300)
+    MAX_VALID_RESOLUTION = (2000, 2000)
     MAX_IMAGE_SIZE = 10485760  # 10 Mb
 
     category = models.ForeignKey(
@@ -105,11 +107,11 @@ class Product(models.Model):
         #         'Разрешение изображения больше максимального!')
 
         """
-        Принудительная обрезка загружаемого изображения 'image', 
+        Принудительная обрезка загружаемого изображения 'image',
         если его размеры превышают MAX_VALID_RESOLUTION
         """
         new_img = img.convert('RGB')  # перед изменением из RGBA в RGB
-        resized_new_img = new_img.resize((600, 600), Image.ANTIALIAS)
+        resized_new_img = new_img.resize((800, 800), Image.ANTIALIAS)
         # Способ №2. Не resize, а new_img.thumbnail()
         # Превращение изображения в поток данных
         filestream = BytesIO()
@@ -117,7 +119,8 @@ class Product(models.Model):
         filestream.seek(0)
         name = '{}.{}'.format(*self.image.name.split('.'))
         self.image = InMemoryUploadedFile(
-            filestream, 'ImageField', name, 'jpeg/image', getsizeof(filestream), None
+            filestream, 'ImageField', name, 'jpeg/image',
+            getsizeof(filestream), None
         )
         super(Product, self).save(*args, **kwargs)
 
@@ -142,6 +145,9 @@ class Notebook(Product):
     time_without_charge = models.CharField(
         verbose_name='Время работы аккумулятора', max_length=255)
 
+    def get_absolute_url(self):
+        return get_product_url(self, 'product_detail')
+
     def __str__(self):
         return '{} : {}'.format(self.category.name, self.title)
 
@@ -158,15 +164,18 @@ class Smartphone(Product):
     display_type = models.CharField(
         verbose_name='Технология экрана', max_length=255)
     ram = models.CharField(verbose_name='Оперативная память', max_length=255)
-    sd = models.BooleanField(verbose_name='Наличие SD карты', default=True)
+    sd = models.BooleanField(verbose_name='Наличие слота для SD карты', default=True)
     sd_volume = models.CharField(
-        verbose_name='Максимальный объём встраиваемой памяти', max_length=255)
+        verbose_name='Максимальный объём SD карты', max_length=255)
     main_cam_mp = models.CharField(
         verbose_name='Главная камера', max_length=255)
     front_cam_mp = models.CharField(
         verbose_name='Фронтальная камера', max_length=255)
     accum_volume = models.CharField(
         verbose_name='Объём батареи', max_length=255)
+
+    def get_absolute_url(self):
+        return get_product_url(self, 'product_detail')
 
     def __str__(self):
         return "{} : {}".format(self.category.name, self.title)

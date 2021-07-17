@@ -25,6 +25,6 @@ urlpatterns = [
 # В режиме отладки используем локальные медиафайлы и статику из проекта
 if settings.DEBUG:
     urlpatterns += static(
-        settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+        settings.STATIC_URL, document_root=settings.STATICFILES_DIRS)
     urlpatterns += static(
         settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
