@@ -51,7 +51,9 @@ class NotebookAdminForm(ModelForm):
 
 
 class SmartphoneAdminForm(ModelForm):
-    """Изменение/расширение стандартного поведения модели Smartphone в админке"""
+    """
+    Изменение/расширение стандартного поведения модели Smartphone в админке
+    """
 
     def __init__(self, *args, **kwargs):
         super(SmartphoneAdminForm, self).__init__(*args, **kwargs)
@@ -66,7 +68,8 @@ class SmartphoneAdminForm(ModelForm):
             })
 
     def clean(self):
-        # Если чекбокс пуст (нет флажка), то поле sd_volume_max тоже будет пустым
+        # Если чекбокс 'sd' пуст (нет флажка), то
+        # поле sd_volume_max тоже будет пустым
         if not self.cleaned_data['sd']:
             self.cleaned_data['sd_volume_max'] = None
         return self.cleaned_data

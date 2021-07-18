@@ -1,8 +1,12 @@
 from django.urls import path
 
-from .views import (BaseView, ProductDetailView, CategoryDetailView)
+from .views import (
+    BaseView, ProductDetailView, CategoryDetailView, CartView, AddToCartView, )
 
 urlpatterns = [
+    path('add-to-cart/<str:ct_model>/<str:slug>/', AddToCartView.as_view(),
+         name='add_to_cart'),
+    path('cart/', CartView.as_view(), name='cart'),
     path('category/<str:slug>/', CategoryDetailView.as_view(),
          name='category_detail'),
     path('products/<str:ct_model>/<str:slug>/', ProductDetailView.as_view(),

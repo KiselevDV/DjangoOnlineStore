@@ -23,7 +23,7 @@ class NotebookAdmin(admin.ModelAdmin):
 
 
 class SmartphoneAdmin(admin.ModelAdmin):
-    # Создание своего шаблона в админке, кастомизация либо полная замена стандартного
+    # Кастомизация либо полная замена стандартного шаблона
     change_form_template = 'admin/smartphone_admin.html'
     form = SmartphoneAdminForm
 

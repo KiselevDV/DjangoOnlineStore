@@ -44,7 +44,8 @@ class LatestProductsManager:
                     # экземпляров классов, model_name - название моделей
                     return sorted(
                         products,
-                        key=lambda x: x.__class__._meta.model_name.startswith(with_respect_to),
+                        key=lambda x: (x.__class__._meta.model_name.
+                                       startswith(with_respect_to)),
                         reverse=True)
 
         return products
@@ -247,6 +248,10 @@ class CartProduct(models.Model):
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
 
+    def save(self, *args, **kwargs):
+        self.final_price = self.qty * self.content_object.price
+        super(CartProduct, self).save(*args, **kwargs)
+
     def __str__(self):
         return 'Продукт: {} (для корзины)'.format(self.content_object.title)
 
@@ -258,14 +263,15 @@ class CartProduct(models.Model):
 class Cart(models.Model):
     """Корзина"""
     owner = models.ForeignKey(
-        'Customer', verbose_name='Владелец', on_delete=models.CASCADE)
+        'Customer', verbose_name='Владелец', on_delete=models.CASCADE,
+        null=True)
     products = models.ManyToManyField(
         CartProduct, verbose_name='Продукты', related_name='related_cart',
         blank=True)
     total_products = models.PositiveIntegerField(
         verbose_name='Количество уникальных товаров', default=0)
     final_price = models.DecimalField(
-        verbose_name='Общая цена', max_digits=9, decimal_places=2)
+        verbose_name='Общая цена', default=0, max_digits=9, decimal_places=2)
     # Если данная корзина используется => закреплена за конкретным пользова
     # -телем и её может использовать, в дальнейшем, только данный пользователь
     in_order = models.BooleanField(
@@ -286,8 +292,10 @@ class Customer(models.Model):
     """Пользователь. Расширенная модель User"""
     user = models.ForeignKey(
         User, verbose_name='Пользователь', on_delete=models.CASCADE)
-    phone = models.CharField(verbose_name='Номер телефона', max_length=20)
-    address = models.CharField(verbose_name='Адрес', max_length=255)
+    phone = models.CharField(
+        verbose_name='Номер телефона', max_length=20, null=True, blank=True)
+    address = models.CharField(
+        verbose_name='Адрес', max_length=255, null=True, blank=True)
 
     def __str__(self):
         return 'Покупатель: {} {}'.format(
