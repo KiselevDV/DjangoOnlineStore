@@ -7,10 +7,12 @@ from .models import Product
 
 
 class NotebookAdminForm(ModelForm):
-    """Переопределение/расширение логики модели Notebook"""
+    """Изменение/расширение стандартного поведения модели Notebook в админке"""
 
     def __init__(self, *args, **kwargs):
-        """Добавление строки help_text полю image"""
+        """
+        Переопределение метода __init__, добавление строки help_text полю image
+        """
         super().__init__(*args, **kwargs)
         self.fields['image'].help_text = mark_safe(
             '<span style="color:red; font-size:14px;">'
@@ -46,3 +48,25 @@ class NotebookAdminForm(ModelForm):
         #         'Разрешение изображения больше максимального!')
 
         return image
+
+
+class SmartphoneAdminForm(ModelForm):
+    """Изменение/расширение стандартного поведения модели Smartphone в админке"""
+
+    def __init__(self, *args, **kwargs):
+        super(SmartphoneAdminForm, self).__init__(*args, **kwargs)
+        # Получаем экземпляр модели из kwargs
+        instance = kwargs.get('instance')
+        # Если есть экземпляр и поле sd=false (нет флажка), в новых экземплярах
+        # по умолчанию есть (default=True), то обновить поле sd_volume_max
+        if instance and not instance.sd:
+            self.fields['sd_volume_max'].widget.attrs.update({
+                # Поле будет серым и только для чтения
+                'readonly': True, 'style': 'background: lightgray'
+            })
+
+    def clean(self):
+        # Если чекбокс пуст (нет флажка), то поле sd_volume_max тоже будет пустым
+        if not self.cleaned_data['sd']:
+            self.cleaned_data['sd_volume_max'] = None
+        return self.cleaned_data

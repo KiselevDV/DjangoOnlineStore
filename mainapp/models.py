@@ -7,10 +7,11 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import models
+from django.urls import reverse
 
 from .exceptions import (
     MinResolutionErrorException, MaxResolutionErrorException, )
-from .utilites import get_product_url
+from .utilites import get_product_url, get_models_for_count
 
 User = get_user_model()  # settings.AUTH_USER_MODEL
 
@@ -58,10 +59,44 @@ class LatestProducts:
     objects = LatestProductsManager()
 
 
+class CategoryManager(models.Manager):
+    """
+    Кастомный менеджер для категорий.
+    Расширение стандартного objects
+    """
+
+    CATEGORY_NAME_COUNT_NAME = {
+        'Ноутбуки': 'notebook__count',
+        'Смартфоны': 'smartphone__count',
+    }
+
+    def get_queryset(self):
+        return super(CategoryManager, self).get_queryset()
+
+    def get_categories_for_left_sidebar(self):
+        """Получить данные через аннотацию джанги (sql)"""
+        models = get_models_for_count('notebook', 'smartphone')
+        # qs = list(self.get_queryset().annotate(*models).values())
+        # return list(dict(name=c['name'], slug=c['slug'],
+        #                  count=c[self.CATEGORY_NAME_COUNT_NAME[c['name']]])
+        #             for c in qs)
+        qs = list(self.get_queryset().annotate(*models))
+        data = [
+            dict(name=c.name, url=c.get_absolute_url(),
+                 count=getattr(c, self.CATEGORY_NAME_COUNT_NAME[c.name]))
+            for c in qs
+        ]
+        return data
+
+
 class Category(models.Model):
     """Категория"""
     name = models.CharField(verbose_name='Имя категории', max_length=255)
     slug = models.SlugField(unique=True)
+    objects = CategoryManager()
+
+    def get_absolute_url(self):
+        return reverse('category_detail', kwargs={'slug': self.slug})
 
     def __str__(self):
         return self.name
@@ -146,6 +181,7 @@ class Notebook(Product):
         verbose_name='Время работы аккумулятора', max_length=255)
 
     def get_absolute_url(self):
+        """Рендер модели на HTML product_detail"""
         return get_product_url(self, 'product_detail')
 
     def __str__(self):
@@ -164,9 +200,11 @@ class Smartphone(Product):
     display_type = models.CharField(
         verbose_name='Технология экрана', max_length=255)
     ram = models.CharField(verbose_name='Оперативная память', max_length=255)
-    sd = models.BooleanField(verbose_name='Наличие слота для SD карты', default=True)
-    sd_volume = models.CharField(
-        verbose_name='Максимальный объём SD карты', max_length=255)
+    sd = models.BooleanField(
+        verbose_name='Наличие слота для SD карты', default=True)
+    sd_volume_max = models.CharField(
+        verbose_name='Максимальный объём SD карты', max_length=255,
+        blank=True, null=True)
     main_cam_mp = models.CharField(
         verbose_name='Главная камера', max_length=255)
     front_cam_mp = models.CharField(
@@ -175,7 +213,14 @@ class Smartphone(Product):
         verbose_name='Объём батареи', max_length=255)
 
     def get_absolute_url(self):
+        """Рендер модели на HTML product_detail"""
         return get_product_url(self, 'product_detail')
+
+    # @property
+    # def sd(self):
+    #     if self.sd:
+    #         return 'Да'
+    #     return 'Нет'
 
     def __str__(self):
         return "{} : {}".format(self.category.name, self.title)
@@ -186,7 +231,7 @@ class Smartphone(Product):
 
 
 class CartProduct(models.Model):
-    """Продуктовая корзина"""
+    """Продуктовая корзина - промежуточный объект"""
     user = models.ForeignKey(
         'Customer', verbose_name='Пользователь', on_delete=models.CASCADE)
     cart = models.ForeignKey(
@@ -203,7 +248,7 @@ class CartProduct(models.Model):
     content_object = GenericForeignKey('content_type', 'object_id')
 
     def __str__(self):
-        return 'Продукт: {} (для корзины)'.format(self.product.title)
+        return 'Продукт: {} (для корзины)'.format(self.content_object.title)
 
     class Meta:
         verbose_name = 'Продуктовая корзина'
@@ -221,9 +266,16 @@ class Cart(models.Model):
         verbose_name='Количество уникальных товаров', default=0)
     final_price = models.DecimalField(
         verbose_name='Общая цена', max_digits=9, decimal_places=2)
+    # Если данная корзина используется => закреплена за конкретным пользова
+    # -телем и её может использовать, в дальнейшем, только данный пользователь
+    in_order = models.BooleanField(
+        verbose_name='Корзина используется', default=False)
+    # Корзина 'заглушка' для неавторизованных пользователей => код не ломается
+    for_anonymous_user = models.BooleanField(
+        verbose_name='Пользователь авторизован', default=False)
 
     def __str__(self):
-        return self.id
+        return str(self.id)
 
     class Meta:
         verbose_name = 'Корзина'

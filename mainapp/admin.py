@@ -5,7 +5,7 @@ mark_safe - превращает обычную строку в HTML тег
 from django.contrib import admin
 from django.forms import ModelChoiceField
 
-from .forms import NotebookAdminForm
+from .forms import NotebookAdminForm, SmartphoneAdminForm
 from .models import (
     Category, Notebook, Smartphone, CartProduct, Cart, Customer, )
 
@@ -23,6 +23,10 @@ class NotebookAdmin(admin.ModelAdmin):
 
 
 class SmartphoneAdmin(admin.ModelAdmin):
+    # Создание своего шаблона в админке, кастомизация либо полная замена стандартного
+    change_form_template = 'admin/smartphone_admin.html'
+    form = SmartphoneAdminForm
+
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Переопределяем работу полей связанных по Foreignkey"""
         if db_field.name == 'category':
