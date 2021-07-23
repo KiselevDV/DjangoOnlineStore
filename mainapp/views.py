@@ -82,6 +82,8 @@ class AddToCartView(CartMixin, View):
         if created:  # только если товара нет в корзине
             # Добавить товар (cart_product) в корзину (cart)
             self.cart.products.add(cart_product)
+        # Информация о корзине сохраняется только тогда, когда в неё что-то добавляется
+        self.cart.save()
 
         return HttpResponseRedirect('/cart/')
 

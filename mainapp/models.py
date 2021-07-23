@@ -280,6 +280,18 @@ class Cart(models.Model):
     for_anonymous_user = models.BooleanField(
         verbose_name='Пользователь авторизован', default=False)
 
+    def save(self, *args, **kwargs):
+        """Получить общую стоимость продуктов в корзине"""
+        # Обратиться ко всем моделям 'products' и посчитай 'aggregate'
+        cart_data = self.products.aggregate(
+            models.Sum('final_price'), models.Count('id'))
+        if cart_data.get('final_price__sum'):
+            self.final_price = cart_data['final_price__sum']
+        else:
+            self.final_price = 0
+        self.total_products = cart_data['id__count']
+        super(Cart, self).save(*args, **kwargs)
+
     def __str__(self):
         return str(self.id)
 
