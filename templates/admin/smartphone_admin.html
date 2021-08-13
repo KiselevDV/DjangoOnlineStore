@@ -3,13 +3,17 @@
 {% load static %}
 
 {% block admin_change_form_document_ready %}
+
   {{ block.super }}
+
   <script>
       // Заблокировать возможность записи в поле '#id_sd_volume_max',
       // если поле '#id_sd' не равно TRUE
       (function ($) {
+
           const sd = $('#id_sd')
           const sdVolumeMax = $('#id_sd_volume_max')
+
           // Был ли клик по элементу с id=id_sd
           sd.on('click', function () {
               // если пункт отмечен в чекбоксе
@@ -23,6 +27,8 @@
                   sdVolumeMax.css('background', 'lightgray');
               }
           })
+
       })(django.jQuery);
   </script>
+
 {% endblock %}

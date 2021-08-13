@@ -1,14 +1,23 @@
 from django.urls import path
 
 from .views import (
-    BaseView, ProductDetailView, CategoryDetailView, CartView, AddToCartView, )
+    BaseView, ProductDetailView, CategoryDetailView, CartView, AddToCartView,
+    DeleteFromCartView, ChangeQTYView, )
 
 urlpatterns = [
+    # Корзина. Добавление/удаление товаров. Кол-во единиц одного товара.
+    path('cart/', CartView.as_view(), name='cart'),
     path('add-to-cart/<str:ct_model>/<str:slug>/', AddToCartView.as_view(),
          name='add_to_cart'),
-    path('cart/', CartView.as_view(), name='cart'),
+    path('remove-from-cart/<str:ct_model>/<str:slug>/', DeleteFromCartView.as_view(),
+         name='delete_from_cart'),
+    path('change-qty/<str:ct_model>/<str:slug>/', ChangeQTYView.as_view(),
+         name='change_qty'),
+
+    # Вывод всех категорий товаров
     path('category/<str:slug>/', CategoryDetailView.as_view(),
          name='category_detail'),
+    # Детальное описание товара
     path('products/<str:ct_model>/<str:slug>/', ProductDetailView.as_view(),
          name='product_detail'),
     path('', BaseView.as_view(), name='base'),

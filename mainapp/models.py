@@ -20,13 +20,13 @@ class LatestProductsManager:
     """Кастомный менеджер для вывода товаров"""
 
     def get_products_for_main_page(self, *args, **kwargs):
-        """Получение последних товаров,- args - смартфоны, ноутбуки"""
+        """Получение последних товаров,- args: смартфоны, ноутбуки"""
         # with_respect_to - определяет приоритет/очередности при выдаче
         # результата. Получение моделей и их запись в переменную
         with_respect_to = kwargs.get('with_respect_to')
 
         products = []
-        # args - зарегистрированные модели в models.py
+        # args - зарегистрированные модели в models.py, наследуемые от Product
         ct_models = ContentType.objects.filter(model__in=args)
         for ct_model in ct_models:
             # ct_model - объект ContentType, model_class - родная модель,
@@ -40,7 +40,7 @@ class LatestProductsManager:
             ct_model = ContentType.objects.filter(model=with_respect_to)
             if ct_model.exists():  # queryset - если есть
                 if with_respect_to in args:  # существует ли данная модель
-                    # products - инстансы моделей, _meta мета атрибут
+                    # products - инстансы моделей, _meta - мета атрибут
                     # экземпляров классов, model_name - название моделей
                     return sorted(
                         products,
@@ -94,6 +94,7 @@ class Category(models.Model):
     """Категория"""
     name = models.CharField(verbose_name='Имя категории', max_length=255)
     slug = models.SlugField(unique=True)
+
     objects = CategoryManager()
 
     def get_absolute_url(self):
@@ -149,16 +150,21 @@ class Product(models.Model):
         new_img = img.convert('RGB')  # перед изменением из RGBA в RGB
         resized_new_img = new_img.resize((800, 800), Image.ANTIALIAS)
         # Способ №2. Не resize, а new_img.thumbnail()
-        # Превращение изображения в поток данных
+
+        # Превращение изображения в поток данных (байты)
         filestream = BytesIO()
         resized_new_img.save(filestream, 'JPEG', quality=90)
         filestream.seek(0)
         name = '{}.{}'.format(*self.image.name.split('.'))
+
         self.image = InMemoryUploadedFile(
             filestream, 'ImageField', name, 'jpeg/image',
             getsizeof(filestream), None
         )
         super(Product, self).save(*args, **kwargs)
+
+    def get_model_name(self):
+        return self.__class__.__name__.lower()
 
     def __str__(self):
         return self.title
@@ -184,6 +190,9 @@ class Notebook(Product):
     def get_absolute_url(self):
         """Рендер модели на HTML product_detail"""
         return get_product_url(self, 'product_detail')
+
+    # def get_model_name(self):
+    #     return self.__class__._meta.model_name
 
     def __str__(self):
         return '{} : {}'.format(self.category.name, self.title)
@@ -217,11 +226,8 @@ class Smartphone(Product):
         """Рендер модели на HTML product_detail"""
         return get_product_url(self, 'product_detail')
 
-    # @property
-    # def sd(self):
-    #     if self.sd:
-    #         return 'Да'
-    #     return 'Нет'
+    # def get_model_name(self):
+    #     return self.__class__._meta.model_name
 
     def __str__(self):
         return "{} : {}".format(self.category.name, self.title)
@@ -243,12 +249,13 @@ class CartProduct(models.Model):
         verbose_name='Общая цена', max_digits=9, decimal_places=2)
 
     # ContentType - видит все модели, предоставляет возможность работы с ними
-    # object_id - id для данной модели, content_object - их связь
+    # object_id - id для данной модели, content_object - их связь ('Notebook'...)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
 
     def save(self, *args, **kwargs):
+        """Подсчёт общей цены"""
         self.final_price = self.qty * self.content_object.price
         super(CartProduct, self).save(*args, **kwargs)
 
@@ -272,6 +279,7 @@ class Cart(models.Model):
         verbose_name='Количество уникальных товаров', default=0)
     final_price = models.DecimalField(
         verbose_name='Общая цена', default=0, max_digits=9, decimal_places=2)
+
     # Если данная корзина используется => закреплена за конкретным пользова
     # -телем и её может использовать, в дальнейшем, только данный пользователь
     in_order = models.BooleanField(
@@ -282,9 +290,12 @@ class Cart(models.Model):
 
     def save(self, *args, **kwargs):
         """Получить общую стоимость продуктов в корзине"""
-        # Обратиться ко всем моделям 'products' и посчитай 'aggregate'
+        # Обратиться ко всем моделям 'products' и посчитай 'aggregate' т.е.
+        # Общая сумма всех товаров и кол-во id-шников
         cart_data = self.products.aggregate(
             models.Sum('final_price'), models.Count('id'))
+
+        # Проверка и запись значений в поля
         if cart_data.get('final_price__sum'):
             self.final_price = cart_data['final_price__sum']
         else:

@@ -27,7 +27,7 @@ class CartMixin(View):
             cart = Cart.objects.filter(owner=customer, in_order=False).first()
             if not cart:  # создание новой
                 cart = Cart.objects.create(owner=customer)
-        else:  # корзина для неавторизованного пользователя
+        else:  # корзина для неавторизованного пользователя (заглушка)
             cart = Cart.objects.filter(for_anonymous_user=True).first()
             if not cart:  # создание новой
                 cart = Cart.objects.create(for_anonymous_user=True)

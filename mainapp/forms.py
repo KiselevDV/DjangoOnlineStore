@@ -1,3 +1,7 @@
+"""
+mark_safe - превращает обычную строку в HTML тег
+ValidationError - работает только на уровне форм
+"""
 from PIL import Image
 
 from django.forms import ModelForm, ValidationError
@@ -16,7 +20,7 @@ class NotebookAdminForm(ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['image'].help_text = mark_safe(
             '<span style="color:red; font-size:14px;">'
-            'Загружайте изображения с минимальным разрешением - {}x{}. '
+            'Загружайте изображения c разрешением не менее - {}x{}. '
             'При загрузке изображения более {}x{} оно будет обрезано!'
             '</span>'.format(*Product.MIN_VALID_RESOLUTION,
                              *Product.MAX_VALID_RESOLUTION)

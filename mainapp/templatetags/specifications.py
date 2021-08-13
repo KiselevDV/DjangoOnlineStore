@@ -64,8 +64,8 @@ def product_spec(product, arg='Что-то ещё'):
     # из context_object_name = 'product' (ProductDetailView)
     model_name = product.__class__._meta.model_name
 
-    # Если данный экземпляр является объектом Smartphone, то из
-    # PRODUCT_SPEC удаляем поле sd_volume_max
+    # Если данный экземпляр 'product' является объектом 'Smartphone',
+    # то из PRODUCT_SPEC удаляем поле sd_volume_max
     if isinstance(product, Smartphone):
         if not product.sd:
             PRODUCT_SPEC['smartphone'].pop('Максимальный объем SD карты', None)
