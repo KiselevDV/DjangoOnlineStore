@@ -1,16 +1,30 @@
 from django.views.generic import View
 from django.views.generic.detail import SingleObjectMixin
 
-from .models import Category, Cart, Customer
+from .models import Category, Cart, Customer, Notebook, Smartphone
 
 
 class CategoryDetailMixin(SingleObjectMixin):
     """Для вывода информации по категориям"""
 
+    CATEGORY_SLUG2PRODUCT_MODEL = {
+        'notebooks': Notebook,
+        'smartphones': Smartphone,
+    }
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Получить конкретную модель (наследуемую от Products)
+        # get_object() - получить инстанс категории, slug из urls
+        # model = Notebook/Smartphone/... все значения модели Category
+        if isinstance(self.get_object(), Category):
+            model = self.CATEGORY_SLUG2PRODUCT_MODEL[self.get_object().slug]
+            context['category_products'] = model.objects.all()
+
         context['categories'] = \
             Category.objects.get_categories_for_left_sidebar()
+
         return context
 
 

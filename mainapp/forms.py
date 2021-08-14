@@ -4,10 +4,11 @@ ValidationError - работает только на уровне форм
 """
 from PIL import Image
 
+from django import forms
 from django.forms import ModelForm, ValidationError
 from django.utils.safestring import mark_safe
 
-from .models import Product
+from .models import Product, Order
 
 
 class NotebookAdminForm(ModelForm):
@@ -77,3 +78,20 @@ class SmartphoneAdminForm(ModelForm):
         if not self.cleaned_data['sd']:
             self.cleaned_data['sd_volume_max'] = None
         return self.cleaned_data
+
+
+class OrderForm(forms.ModelForm):
+    """Форма оформления заказа товаров"""
+
+    def __init__(self, *args, **kwargs):
+        super(OrderForm, self).__init__(*args, **kwargs)
+        self.fields['order_date'].label = 'Дата получения заказа'
+
+    order_date = forms.DateField(
+        # label='Дата получения заказа',
+        widget=forms.TextInput(attrs={'type': 'date'}))
+
+    class Meta:
+        model = Order
+        fields = ('first_name', 'last_name', 'phone', 'address', 'buying_type',
+                  'order_date', 'comment')

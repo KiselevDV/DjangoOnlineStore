@@ -1,13 +1,15 @@
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.views.generic import View, DetailView
 
+from .forms import OrderForm
 from .mixins import CategoryDetailMixin, CartMixin
 from .models import (
-    LatestProducts, Category, Notebook, Smartphone, CartProduct, Cart,
-    Customer, )
+    LatestProducts, Category, Notebook, Smartphone, CartProduct, Customer, )
+from .utils import recalc_cart
 
 
 class BaseView(CartMixin, View):
@@ -47,9 +49,10 @@ class ProductDetailView(CartMixin, CategoryDetailMixin, DetailView):
     slug_url_kwarg = 'slug'
 
     def get_context_data(self, **kwargs):
-        """Добавить информацию о конкретной модели"""
+        """Добавить информацию о конкретной модели и корзине"""
         context = super().get_context_data(**kwargs)
         context['ct_model'] = self.model._meta.model_name
+        context['cart'] = self.cart
         return context
 
 
@@ -61,6 +64,12 @@ class CategoryDetailView(CartMixin, CategoryDetailMixin, DetailView):
     context_object_name = 'category'
     template_name = 'mainapp/category_detail.html'
     slug_url_kwarg = 'slug'
+
+    def get_context_data(self, **kwargs):
+        """Добавить информацию о корзине"""
+        context = super().get_context_data(**kwargs)
+        context['cart'] = self.cart
+        return context
 
 
 class CartView(CartMixin, View):
@@ -95,10 +104,12 @@ class AddToCartView(CartMixin, View):
         if created:  # только если товара нет в корзине
             # Добавить товар (cart_product) в корзину (cart)
             self.cart.products.add(cart_product)
-        # Информация о корзине сохраняется только тогда, когда в неё что-то добавляется
-        self.cart.save()
+        # Информация о корзине сохраняется только тогда,
+        # когда в неё что-то добавляется
+        recalc_cart(self.cart)
 
-        messages.add_message(request, messages.INFO, 'Товар успешно добавлен в корзину')
+        messages.add_message(
+            request, messages.INFO, 'Товар успешно добавлен в корзину')
         return HttpResponseRedirect('/cart/')
 
 
@@ -121,9 +132,10 @@ class DeleteFromCartView(CartMixin, View):
         # Удалить запись из CartProduct
         cart_product.delete()
 
-        self.cart.save()
+        recalc_cart(self.cart)
 
-        messages.add_message(request, messages.INFO, 'Товар успешно удалён из корзины')
+        messages.add_message(
+            request, messages.INFO, 'Товар успешно удалён из корзины')
         return HttpResponseRedirect('/cart/')
 
 
@@ -145,7 +157,56 @@ class ChangeQTYView(CartMixin, View):
         qty = int(request.POST.get('qty'))
         cart_product.qty = qty
         cart_product.save()
-        self.cart.save()
+        recalc_cart(self.cart)
 
         messages.add_message(request, messages.INFO, 'Кол-во успешно изменено')
         return HttpResponseRedirect('/cart/')
+
+
+class CheckoutView(CartMixin, View):
+    """Оформление заказа. Вывод данных на странице"""
+
+    def get(self, request, *args, **kwargs):
+        categories = Category.objects.get_categories_for_left_sidebar()
+        form = OrderForm(request.POST or None)
+        context = {
+            'categories': categories,
+            'cart': self.cart,
+            'form': form,
+        }
+        return render(request, 'mainapp/checkout.html', context)
+
+
+class MakeOrderView(CartMixin, View):
+    """Обработка заказа. Забрать данные из полей формы"""
+
+    # transaction.atomic - если на любом этапе выполнения ф-ии "код сломается",
+    # произойдёт аткат к началу ф-ии
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        form = OrderForm(request.POST or None)
+        customer = Customer.objects.get(user=request.user)
+        if form.is_valid():
+            new_order = form.save(commit=False)  # приостановить сохранение
+
+            # Забрать данные из полей формы
+            new_order.customer = customer
+            new_order.first_name = form.cleaned_data['first_name']
+            new_order.last_name = form.cleaned_data['last_name']
+            new_order.phone = form.cleaned_data['phone']
+            new_order.address = form.cleaned_data['address']
+            new_order.buying_type = form.cleaned_data['buying_type']
+            new_order.order_date = form.cleaned_data['order_date']
+            new_order.comment = form.cleaned_data['comment']
+            new_order.save()
+
+            self.cart.in_order = True  # закрепить корзину за пользователем
+            self.cart.save()
+            new_order.cart = self.cart  # поместить корзину после созранения
+            customer.orders.add(new_order)
+            new_order.save()
+
+            messages.add_message(
+                request, messages.INFO, 'Заказ отправлен. Спасибо за покупку!')
+            return HttpResponseRedirect('/')
+        return HttpResponseRedirect('/checkout/')

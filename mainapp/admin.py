@@ -6,7 +6,7 @@ from django.forms import ModelChoiceField
 
 from .forms import NotebookAdminForm, SmartphoneAdminForm
 from .models import (
-    Category, Notebook, Smartphone, CartProduct, Cart, Customer, )
+    Category, Notebook, Smartphone, CartProduct, Cart, Customer, Order)
 
 
 class NotebookAdmin(admin.ModelAdmin):
@@ -40,6 +40,7 @@ admin.site.register(Smartphone, SmartphoneAdmin)
 admin.site.register(CartProduct)
 admin.site.register(Cart)
 admin.site.register(Customer)
+admin.site.register(Order)
 
 admin.site.site_header = 'Интернет магазин'
 admin.site.site_title = 'Сайт интернет магазина'

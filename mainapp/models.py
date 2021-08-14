@@ -8,10 +8,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 
 from .exceptions import (
     MinResolutionErrorException, MaxResolutionErrorException, )
-from .utilites import get_product_url, get_models_for_count
+from .utils import get_product_url, get_models_for_count
 
 User = get_user_model()  # settings.AUTH_USER_MODEL
 
@@ -32,7 +33,7 @@ class LatestProductsManager:
             # ct_model - объект ContentType, model_class - родная модель,
             # _base_manager - базовый менеджер типа objects
             model_products = \
-                ct_model.model_class()._base_manager.all().order_by('-id')[:5]
+                ct_model.model_class()._base_manager.all().order_by('-id')[:3]
             products.extend(model_products)
 
         if with_respect_to:
@@ -47,7 +48,6 @@ class LatestProductsManager:
                         key=lambda x: (x.__class__._meta.model_name.
                                        startswith(with_respect_to)),
                         reverse=True)
-
         return products
 
 
@@ -121,7 +121,8 @@ class Product(models.Model):
     title = models.CharField(verbose_name='Наименование', max_length=255)
     description = models.TextField(verbose_name='Описание', null=True)
     image = models.ImageField(
-        verbose_name='Изображение товара', upload_to='mainapp/images')
+        verbose_name='Изображение товара', upload_to='mainapp/images',
+        null=True, blank=True)
     price = models.DecimalField(
         verbose_name='Цена', max_digits=9, decimal_places=2)
     slug = models.SlugField(unique=True)
@@ -238,7 +239,10 @@ class Smartphone(Product):
 
 
 class CartProduct(models.Model):
-    """Продуктовая корзина - промежуточный объект"""
+    """
+    Продуктовая корзина - промежуточный объект.
+    Объект который положим в корзину.
+    """
     user = models.ForeignKey(
         'Customer', verbose_name='Пользователь', on_delete=models.CASCADE)
     cart = models.ForeignKey(
@@ -249,7 +253,7 @@ class CartProduct(models.Model):
         verbose_name='Общая цена', max_digits=9, decimal_places=2)
 
     # ContentType - видит все модели, предоставляет возможность работы с ними
-    # object_id - id для данной модели, content_object - их связь ('Notebook'...)
+    # object_id - id для данной модели, content_object - их связь 'Notebook'..
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
@@ -288,23 +292,24 @@ class Cart(models.Model):
     for_anonymous_user = models.BooleanField(
         verbose_name='Пользователь авторизован', default=False)
 
-    def save(self, *args, **kwargs):
-        """Получить общую стоимость продуктов в корзине"""
-        # Обратиться ко всем моделям 'products' и посчитай 'aggregate' т.е.
-        # Общая сумма всех товаров и кол-во id-шников
-        cart_data = self.products.aggregate(
-            models.Sum('final_price'), models.Count('id'))
-
-        # Проверка и запись значений в поля
-        if cart_data.get('final_price__sum'):
-            self.final_price = cart_data['final_price__sum']
-        else:
-            self.final_price = 0
-        self.total_products = cart_data['id__count']
-        super(Cart, self).save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     """Получить общую стоимость продуктов в корзине"""
+    #     # Обратиться ко всем моделям 'products' и посчитай 'aggregate' т.е.
+    #     # Общая сумма всех товаров и кол-во id-шников
+    #     cart_data = self.products.aggregate(
+    #         models.Sum('final_price'), models.Count('id'))
+    #
+    #     # Проверка и запись значений в поля
+    #     if cart_data.get('final_price__sum'):
+    #         self.final_price = cart_data['final_price__sum']
+    #     else:
+    #         self.final_price = 0
+    #     self.total_products = cart_data['id__count']
+    #     super(Cart, self).save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.id)
+        return 'Корзина №{}, владелец {}'.format(
+            str(self.id), self.owner)
 
     class Meta:
         verbose_name = 'Корзина'
@@ -319,11 +324,70 @@ class Customer(models.Model):
         verbose_name='Номер телефона', max_length=20, null=True, blank=True)
     address = models.CharField(
         verbose_name='Адрес', max_length=255, null=True, blank=True)
+    orders = models.ManyToManyField(
+        'Order', verbose_name='Заказы покупателя',
+        related_name='related_customer')
 
     def __str__(self):
-        return 'Покупатель: {} {}'.format(
-            self.user.first_name, self.user.last_name)
+        return '{} ({} {})'.format(
+            self.user, self.user.first_name, self.user.last_name)
 
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
+
+
+class Order(models.Model):
+    """Заказ товаров"""
+
+    STATUS_NEW = 'new'
+    STATUS_IN_PROGRESS = 'in_progress'
+    STATUS_READY = 'is_ready'
+    STATUS_COMPLETED = 'completed'
+
+    BUYING_TYPE_SELF = 'self'
+    BUYING_TYPE_DELIVERY = 'delivery'
+
+    STATUS_CHOICES = (
+        (STATUS_NEW, 'Новый заказ'),
+        (STATUS_IN_PROGRESS, 'Заказ в обработке'),
+        (STATUS_READY, 'Заказ готов'),
+        (STATUS_COMPLETED, 'Заказ выполнен'),
+    )
+
+    BUYING_TYPE_CHOICES = (
+        (BUYING_TYPE_SELF, 'Самовывоз'),
+        (BUYING_TYPE_DELIVERY, 'Доставка'),
+    )
+
+    cart = models.ForeignKey(
+        Cart, verbose_name='Корзина', on_delete=models.CASCADE,
+        null=True, blank=True)
+    customer = models.ForeignKey(
+        Customer, verbose_name='Покупатель', on_delete=models.CASCADE,
+        related_name='related_orders')
+    first_name = models.CharField(verbose_name='Имя', max_length=60)
+    last_name = models.CharField(verbose_name='Фамилия', max_length=60)
+    phone = models.CharField(verbose_name='Телефон', max_length=20)
+    address = models.CharField(
+        verbose_name='Адрес', max_length=1024, null=True, blank=True)
+    status = models.CharField(
+        verbose_name='Статус заказа', max_length=15, choices=STATUS_CHOICES,
+        default=STATUS_NEW)
+    buying_type = models.CharField(
+        verbose_name='Тип заказа', max_length=15, choices=BUYING_TYPE_CHOICES,
+        default=BUYING_TYPE_SELF)
+    comment = models.TextField(
+        verbose_name='Комментарий к заказу', null=True, blank=True)
+    created_at = models.DateTimeField(
+        verbose_name='Дата создания заказа', auto_now=True)
+    order_date = models.DateField(
+        verbose_name='Дата получения заказа', default=timezone.now)
+
+    def __str__(self):
+        return 'Заказ №{}, от пользователя {}'.format(
+            str(self.id), self.customer)
+
+    class Meta:
+        verbose_name = 'Заказ'
+        verbose_name_plural = 'Заказы'
