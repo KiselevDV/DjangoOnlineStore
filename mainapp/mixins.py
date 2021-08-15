@@ -1,7 +1,9 @@
 from django.views.generic import View
 from django.views.generic.detail import SingleObjectMixin
 
-from .models import Category, Cart, Customer, Notebook, Smartphone
+from .models import (
+    Category, Cart, Customer, Notebook, Smartphone, Computer, Monitor, TV,
+    Tablet, )
 
 
 class CategoryDetailMixin(SingleObjectMixin):
@@ -10,6 +12,10 @@ class CategoryDetailMixin(SingleObjectMixin):
     CATEGORY_SLUG2PRODUCT_MODEL = {
         'notebooks': Notebook,
         'smartphones': Smartphone,
+        'computers': Computer,
+        'monitors': Monitor,
+        'tv_sets': TV,
+        'tablets': Tablet,
     }
 
     def get_context_data(self, **kwargs):

@@ -20,6 +20,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', include('mainapp.api.urls')),
     path('', include('mainapp.urls')),
 ]
 # В режиме отладки используем локальные медиафайлы и статику из проекта

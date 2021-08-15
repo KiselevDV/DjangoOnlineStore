@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-lu7y5=q2ixe9dmt%i6ruexl)5%#)#pw_*e8f^py=p=u9gy$f$n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 # Application definition
 
@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'rest_framework',
 
     'mainapp.apps.MainappConfig',
 
@@ -134,3 +136,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Для работы с библиотекой 'django-crispy-forms'.
 # Указать фреймворк с которым осуществляется взаимодействие
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+# Настройки REST
+# Глобальная установка пагинации, для всех вьюшек
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+}

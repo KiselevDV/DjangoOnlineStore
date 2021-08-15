@@ -69,6 +69,10 @@ class CategoryManager(models.Manager):
     CATEGORY_NAME_COUNT_NAME = {
         'Ноутбуки': 'notebook__count',
         'Смартфоны': 'smartphone__count',
+        'Компьютеры': 'computer__count',
+        'Мониторы': 'monitor__count',
+        'Телевизоры': 'tv__count',
+        'Планшеты': 'tablet__count',
     }
 
     def get_queryset(self):
@@ -76,7 +80,9 @@ class CategoryManager(models.Manager):
 
     def get_categories_for_left_sidebar(self):
         """Получить данные через аннотацию джанги (sql)"""
-        models = get_models_for_count('notebook', 'smartphone')
+        models = get_models_for_count(
+            # 'notebook', 'smartphone')
+            'notebook', 'smartphone', 'computer', 'monitor', 'tv', 'tablet')
         # qs = list(self.get_queryset().annotate(*models).values())
         # return list(dict(name=c['name'], slug=c['slug'],
         #                  count=c[self.CATEGORY_NAME_COUNT_NAME[c['name']]])
@@ -106,6 +112,7 @@ class Category(models.Model):
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
+        ordering = ('name',)
 
 
 class Product(models.Model):
@@ -236,6 +243,133 @@ class Smartphone(Product):
     class Meta:
         verbose_name = 'Смартфон'
         verbose_name_plural = 'Смартфоны'
+
+
+class Computer(Product):
+    """ПК"""
+    processor_model = models.CharField(
+        verbose_name='Процессор', max_length=255)
+    number_of_cores = models.CharField('Количество ядер', max_length=255)
+    processor_freq = models.CharField(
+        verbose_name='Тактовая частота процессора', max_length=255)
+    ram_type = models.CharField(
+        verbose_name='Тип оперативной памяти', max_length=255)
+    ram_frequency = models.CharField(
+        verbose_name='Частота оперативной памяти', max_length=255)
+    ram_size = models.CharField(
+        verbose_name='Объём оперативной памяти', max_length=255)
+    storage_type = models.CharField('Тип накопителя', max_length=255)
+    storage_capacity = models.CharField('Тип накопителя', max_length=255)
+    video = models.CharField(verbose_name='Видеокарта', max_length=255)
+    local_video_memory = models.CharField(
+        verbose_name='Локальная видеопамять', max_length=255)
+    power_supply = models.CharField(
+        verbose_name='Блок питания', max_length=255)
+
+    def get_absolute_url(self):
+        """Рендер модели на HTML product_detail"""
+        return get_product_url(self, 'product_detail')
+
+    # def get_model_name(self):
+    #     return self.__class__._meta.model_name
+
+    def __str__(self):
+        return '{} : {}'.format(self.category.name, self.title)
+
+    class Meta:
+        verbose_name = 'Компьютер'
+        verbose_name_plural = 'Компьютеры'
+
+
+class Monitor(Product):
+    """Монитор"""
+
+    diagonal = models.CharField(verbose_name='Диагональ', max_length=255)
+    aspect_ratio = models.CharField(
+        verbose_name='Соотношение сторон', max_length=255)
+    resolution = models.CharField(verbose_name='Разрешение', max_length=255)
+    matrix = models.CharField(verbose_name='Матрица', max_length=255)
+    screen_refresh_rate = models.CharField(
+        verbose_name='Частота обновления экрана', max_length=255)
+
+    def get_absolute_url(self):
+        """Рендер модели на HTML product_detail"""
+        return get_product_url(self, 'product_detail')
+
+    # def get_model_name(self):
+    #     return self.__class__._meta.model_name
+
+    def __str__(self):
+        return '{} : {}'.format(self.category.name, self.title)
+
+    class Meta:
+        verbose_name = 'Монитор'
+        verbose_name_plural = 'Мониторы'
+
+
+class TV(Product):
+    """Телевизор"""
+
+    type = models.CharField(verbose_name='Тип', max_length=255)
+    diagonal = models.CharField(
+        verbose_name='Диагональ экрана', max_length=255)
+    resolution = models.CharField(verbose_name='Разрешение', max_length=255)
+    matrix_type = models.CharField(verbose_name='Тип матрицы', max_length=255)
+    matrix_frequency = models.CharField(
+        verbose_name='Частота матрицы', max_length=255)
+    image_quality_index = models.CharField(
+        verbose_name='Индекс качества изображения', max_length=255)
+    smart_tv = models.BooleanField(verbose_name='Smart TV', default=False)
+
+    def get_absolute_url(self):
+        """Рендер модели на HTML product_detail"""
+        return get_product_url(self, 'product_detail')
+
+    # def get_model_name(self):
+    #     return self.__class__._meta.model_name
+
+    def __str__(self):
+        return '{} : {}'.format(self.category.name, self.title)
+
+    class Meta:
+        verbose_name = 'Телевизор'
+        verbose_name_plural = 'Телевизоры'
+
+
+class Tablet(Product):
+    """Планшет"""
+    diagonal = models.CharField(
+        verbose_name='Диагональ экрана', max_length=255)
+    resolution = models.CharField(
+        verbose_name='Разрешение экрана', max_length=255)
+    display_type = models.CharField(
+        verbose_name='Матрица экрана', max_length=255)
+    ram = models.CharField(verbose_name='Оперативная память', max_length=255)
+    sd = models.BooleanField(
+        verbose_name='Наличие слота для SD карты', default=True)
+    sd_volume_max = models.CharField(
+        verbose_name='Максимальный объём SD карты', max_length=255,
+        blank=True, null=True)
+    main_cam_mp = models.CharField(
+        verbose_name='Главная камера', max_length=255)
+    front_cam_mp = models.CharField(
+        verbose_name='Фронтальная камера', max_length=255)
+    accum_volume = models.CharField(
+        verbose_name='Объём батареи', max_length=255)
+
+    def get_absolute_url(self):
+        """Рендер модели на HTML product_detail"""
+        return get_product_url(self, 'product_detail')
+
+    # def get_model_name(self):
+    #     return self.__class__._meta.model_name
+
+    def __str__(self):
+        return "{} : {}".format(self.category.name, self.title)
+
+    class Meta:
+        verbose_name = 'Планшет'
+        verbose_name_plural = 'Планшеты'
 
 
 class CartProduct(models.Model):
