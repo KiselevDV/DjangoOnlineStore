@@ -1,14 +1,20 @@
+"""
+stripe - ситема онлайн платежей на сайте (card payment)
+"""
+import stripe
+
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.views.generic import View, DetailView
 
 from .forms import OrderForm
 from .mixins import CategoryDetailMixin, CartMixin
 from .models import (
-    LatestProducts, Category, Notebook, Smartphone, CartProduct, Customer, )
+    LatestProducts, Category, Notebook, Smartphone, CartProduct, Customer,
+    Order, )
 from .utils import recalc_cart
 
 
@@ -167,12 +173,28 @@ class CheckoutView(CartMixin, View):
     """Оформление заказа. Вывод данных на странице"""
 
     def get(self, request, *args, **kwargs):
+        # Встраиваем систему оплаты онлайн - stripe
+        # Создать инициацию онлайн платежа
+        # Set your secret key. Remember to switch to your live secret key in production.
+        # See your keys here: https://dashboard.stripe.com/apikeys
+        stripe.api_key = "sk_test_51JOnsiC11ED4v6Z5ywujZ2DgfexY4dphHIjspYYXSQpudIJQILtZQf7cj0YNkn74mLs2ENUnhpeYT9X2qehSodIO00vuQAxNtF"
+
+        intent = stripe.PaymentIntent.create(
+            # amount - принимает только int!!!
+            amount=int(self.cart.final_price * 100),
+            currency='rub',
+            # Verify your integration in this guide by including this parameter
+            metadata={'integration_check': 'accept_a_payment'},
+        )
+
         categories = Category.objects.get_categories_for_left_sidebar()
         form = OrderForm(request.POST or None)
         context = {
             'categories': categories,
             'cart': self.cart,
             'form': form,
+            # Установить/вернуть секретный ключ, для валидации оплаты
+            'client_secret': intent.client_secret,
         }
         return render(request, 'mainapp/checkout.html', context)
 
@@ -200,7 +222,8 @@ class MakeOrderView(CartMixin, View):
             new_order.comment = form.cleaned_data['comment']
             new_order.save()
 
-            self.cart.in_order = True  # закрепить корзину за пользователем
+            # Закрепить корзину за пользователем и очистить её
+            self.cart.in_order = True
             self.cart.save()
             new_order.cart = self.cart  # поместить корзину после созранения
             customer.orders.add(new_order)
@@ -210,3 +233,32 @@ class MakeOrderView(CartMixin, View):
                 request, messages.INFO, 'Заказ отправлен. Спасибо за покупку!')
             return HttpResponseRedirect('/')
         return HttpResponseRedirect('/checkout/')
+
+
+class PayedOnlineOrderView(CartMixin, View):
+    """Оплата заказа онлайн"""
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        customer = Customer.objects.get(user=request.user)
+        new_order = Order()  # создать новый объект
+
+        new_order.customer = customer
+        new_order.first_name = customer.user.first_name
+        new_order.last_name = customer.user.last_name
+        new_order.phone = customer.phone
+        new_order.address = customer.address
+
+        # Данные из самого запроса
+        new_order.buying_type = Order.BUYING_TYPE_SELF
+        new_order.save()
+
+        # Закрепить корзину за пользователем и очистить её
+        self.cart.in_order = True
+        self.cart.save()
+        new_order.cart = self.cart  # поместить корзину после созранения
+        new_order.status = Order.STATUS_PAYED
+        customer.orders.add(new_order)
+        new_order.save()
+
+        return JsonResponse({'status': 'payed'})

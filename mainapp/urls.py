@@ -2,12 +2,15 @@ from django.urls import path
 
 from .views import (
     BaseView, ProductDetailView, CategoryDetailView, CartView, AddToCartView,
-    DeleteFromCartView, ChangeQTYView, CheckoutView, MakeOrderView, )
+    DeleteFromCartView, ChangeQTYView, CheckoutView, MakeOrderView,
+    PayedOnlineOrderView, )
 
 urlpatterns = [
-    # Оформление и отправка заказа
+    # Оформление, отправка и оплата заказа
     path('checkout/', CheckoutView.as_view(), name='checkout'),
     path('make-order/', MakeOrderView.as_view(), name='make_order'),
+    path('payed-online-order/', PayedOnlineOrderView.as_view(),
+         name='payed_online_order'),
 
     # Корзина. Добавление/удаление товаров. Кол-во единиц одного товара.
     path('cart/', CartView.as_view(), name='cart'),

@@ -460,7 +460,7 @@ class Customer(models.Model):
         verbose_name='Адрес', max_length=255, null=True, blank=True)
     orders = models.ManyToManyField(
         'Order', verbose_name='Заказы покупателя',
-        related_name='related_customer')
+        related_name='related_customer', blank=True)
 
     def __str__(self):
         return '{} ({} {})'.format(
@@ -478,6 +478,7 @@ class Order(models.Model):
     STATUS_IN_PROGRESS = 'in_progress'
     STATUS_READY = 'is_ready'
     STATUS_COMPLETED = 'completed'
+    STATUS_PAYED = 'payed'
 
     BUYING_TYPE_SELF = 'self'
     BUYING_TYPE_DELIVERY = 'delivery'
@@ -487,6 +488,7 @@ class Order(models.Model):
         (STATUS_IN_PROGRESS, 'Заказ в обработке'),
         (STATUS_READY, 'Заказ готов'),
         (STATUS_COMPLETED, 'Заказ выполнен'),
+        (STATUS_PAYED, 'Заказ оплачен'),
     )
 
     BUYING_TYPE_CHOICES = (

@@ -13,6 +13,9 @@
 
   <link rel="stylesheet" type="text/css" href="{% static 'mainapp/css/bootstrap.min.css' %}">
   <link rel="stylesheet" type="text/css" href="{% static 'mainapp/css/base.css' %}">
+
+  {% block head %}
+  {% endblock head %}
 </head>
 
 <body>
@@ -133,6 +136,9 @@
 <!-- Bootstrap core JavaScript -->
 <script src="{% static 'mainapp/js/jquery-3.6.0.min.js' %}"></script>
 <script src="{% static 'mainapp/js/bootstrap.min.js' %}"></script>
+
+{% block script %}
+{% endblock script %}
 
 </body>
 
