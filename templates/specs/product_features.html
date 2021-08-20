@@ -1,0 +1,41 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <link rel="stylesheet" href="{% static 'specs/css/bootstrap5.min.css' %}">
+</head>
+<body>
+<div class="container">
+  <h3 class="text-center">Админка характеристик</h3>
+  <hr>
+  <div class="row">
+    <div class="col-md-4">
+      <div class="list-group">
+        <a href="{% url 'new-category' %}"
+           class="list-group-item list-group-item-action {% if request.path == '/product-specs/new-category/' %}active{% endif %}">
+          Создать новую категорию
+        </a>
+        <a href="{% url 'new-feature' %}"
+           class="list-group-item list-group-item-action {% if request.path == '/product-specs/new-feature/' %}active{% endif %}">
+          Создать новую характеристику
+        </a>
+        <a href="#" class="list-group-item list-group-item-action">Создать значение характеристики</a>
+        <a href="#" class="list-group-item list-group-item-action">Создать характеристику для товара</a>
+        <a href="#" class="list-group-item list-group-item-action">Редактировать характеристики товара</a>
+      </div>
+    </div>
+    <div class="col-md-8">
+      {% block content %}
+
+      {% endblock %}
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'mainapp/js/jquery-3.6.0.min.js' %}"></script>
+<script src="{% static 'specs/js/bootstrap5.min.js' %}"></script>
+</body>
+</html>

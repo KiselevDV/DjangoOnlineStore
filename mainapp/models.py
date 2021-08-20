@@ -15,11 +15,11 @@ class Category(models.Model):
     def get_absolute_url(self):
         return reverse('category_detail', kwargs={'slug': self.slug})
 
-    def get_fields_for_filter_in_template(self):
-        return ProductFeatures.objects.filter(
-            category=self, use_in_filter=True
-        ).prefetch_related('category').value(
-            'feature_key', 'feature_measure', 'feature_name', 'filter_type')
+    # def get_fields_for_filter_in_template(self):
+    #     return ProductFeatures.objects.filter(
+    #         category=self, use_in_filter=True
+    #     ).prefetch_related('category').value(
+    #         'feature_key', 'feature_measure', 'feature_name', 'filter_type')
 
     def __str__(self):
         return self.name
@@ -56,75 +56,6 @@ class Product(models.Model):
     class Meta:
         verbose_name = 'Товар'
         verbose_name_plural = 'Товары'
-
-
-class ProductFeatures(models.Model):
-    """Спец. хар-ки для товаров"""
-    RADIO = 'radio'
-    CHECKBOX = 'checkbox'
-
-    FILTER_TYPE_CHOICES = (
-        (RADIO, 'Радиокнопка'),
-        (CHECKBOX, 'Чекбокс')
-    )
-
-    feature_key = models.CharField(
-        verbose_name='Ключ характеристики', max_length=100)
-    feature_name = models.CharField(
-        verbose_name='Наименование', max_length=255)
-    category = models.ForeignKey(
-        Category, verbose_name='Категория', on_delete=models.CASCADE)
-    postfix_for_value = models.CharField(
-        verbose_name='Постфикс для значения', max_length=20,
-        null=True, blank=True,
-        help_text=('Например для хар-ки "Часы работы" к значению можно '
-                   'добавить постфикс "часов", и как результат - '
-                   'значение "10 часов"')
-    )
-    use_in_filter = models.BooleanField(
-        verbose_name='Использовать в фильтрации товаров в шаблоне',
-        default=False)
-    filter_type = models.CharField(
-        verbose_name='Тип фильтра', max_length=20, default=CHECKBOX,
-        choices=FILTER_TYPE_CHOICES)
-    filter_measure = models.CharField(
-        verbose_name='Единица измерения для фильтра', max_length=50,
-        help_text=('Единица измерения для конкретного фильтра. Например '
-                   '"Частота процессора (GHz)". Единицей измерения будет'
-                   'информация в скобках')
-    )
-
-    def __str__(self):
-        return (f'Категория - "{self.category.name}" | '
-                f'Характеристика  - "{self.feature_name}"')
-
-    class Meta:
-        verbose_name = 'Характеристики для товара'
-        verbose_name_plural = 'Характеристики для товаров'
-
-
-class ProductFutureValidators(models.Model):
-    """Валидатор для спец. характеристик товаров"""
-    category = models.ForeignKey(
-        Category, verbose_name='Категория', on_delete=models.CASCADE)
-    feature = models.ForeignKey(
-        ProductFeatures, verbose_name='Характеристика',
-        on_delete=models.CASCADE, null=True, blank=True)
-    feature_value = models.CharField(
-        verbose_name='Значение характеристики', max_length=255, unique=True,
-        null=True, blank=True)
-
-    def __str__(self):
-        if not self.feature:
-            return (f'Валидатор категории "{self.category.name}" - '
-                    f'характеристика не выбрана')
-        return (f'Валидатор категории "{self.category.name}" | '
-                f'Характеристика - "{self.feature.feature_name}" | '
-                f'Значение - "{self.feature_value}"')
-
-    class Meta:
-        verbose_name = 'Валидатор для спец. хар-к'
-        verbose_name_plural = 'Валидаторы для спец. хар-к'
 
 
 class CartProduct(models.Model):
@@ -263,3 +194,72 @@ class Order(models.Model):
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
+
+# Функционал ниже реализован в отдельном приложении 'specs'
+# class ProductFeatures(models.Model):
+#     """Спец. хар-ки для товаров"""
+#     RADIO = 'radio'
+#     CHECKBOX = 'checkbox'
+#
+#     FILTER_TYPE_CHOICES = (
+#         (RADIO, 'Радиокнопка'),
+#         (CHECKBOX, 'Чекбокс')
+#     )
+#
+#     feature_key = models.CharField(
+#         verbose_name='Ключ характеристики', max_length=100)
+#     feature_name = models.CharField(
+#         verbose_name='Наименование', max_length=255)
+#     category = models.ForeignKey(
+#         Category, verbose_name='Категория', on_delete=models.CASCADE)
+#     postfix_for_value = models.CharField(
+#         verbose_name='Постфикс для значения', max_length=20,
+#         null=True, blank=True,
+#         help_text=('Например для хар-ки "Часы работы" к значению можно '
+#                    'добавить постфикс "часов", и как результат - '
+#                    'значение "10 часов"')
+#     )
+#     use_in_filter = models.BooleanField(
+#         verbose_name='Использовать в фильтрации товаров в шаблоне',
+#         default=False)
+#     filter_type = models.CharField(
+#         verbose_name='Тип фильтра', max_length=20, default=CHECKBOX,
+#         choices=FILTER_TYPE_CHOICES)
+#     filter_measure = models.CharField(
+#         verbose_name='Единица измерения для фильтра', max_length=50,
+#         help_text=('Единица измерения для конкретного фильтра. Например '
+#                    '"Частота процессора (GHz)". Единицей измерения будет'
+#                    'информация в скобках')
+#     )
+#
+#     def __str__(self):
+#         return (f'Категория - "{self.category.name}" | '
+#                 f'Характеристика  - "{self.feature_name}"')
+#
+#     class Meta:
+#         verbose_name = 'Характеристики для товара'
+#         verbose_name_plural = 'Характеристики для товаров'
+#
+#
+# class ProductFutureValidators(models.Model):
+#     """Валидатор для спец. характеристик товаров"""
+#     category = models.ForeignKey(
+#         Category, verbose_name='Категория', on_delete=models.CASCADE)
+#     feature = models.ForeignKey(
+#         ProductFeatures, verbose_name='Характеристика',
+#         on_delete=models.CASCADE, null=True, blank=True)
+#     feature_value = models.CharField(
+#         verbose_name='Значение характеристики', max_length=255, unique=True,
+#         null=True, blank=True)
+#
+#     def __str__(self):
+#         if not self.feature:
+#             return (f'Валидатор категории "{self.category.name}" - '
+#                     f'характеристика не выбрана')
+#         return (f'Валидатор категории "{self.category.name}" | '
+#                 f'Характеристика - "{self.feature.feature_name}" | '
+#                 f'Значение - "{self.feature_value}"')
+#
+#     class Meta:
+#         verbose_name = 'Валидатор для спец. хар-к'
+#         verbose_name_plural = 'Валидаторы для спец. хар-к'
