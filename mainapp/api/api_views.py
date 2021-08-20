@@ -1,20 +1,13 @@
-"""
-Не рендерит информацию в HTML, выдаёт данные в JSON
-ListCreateAPIView - либо получить список, либо создать объект
-"""
 from collections import OrderedDict
 
-from rest_framework.filters import SearchFilter
 from rest_framework.generics import (
-    ListAPIView, RetrieveAPIView, ListCreateAPIView, RetrieveUpdateAPIView, )
+    ListAPIView, ListCreateAPIView, RetrieveUpdateAPIView, )
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from .serializers import (
-    NotebookSerializer, SmartphoneSerializer, CategorySerializer,
-    CustomerSerializer, )
+from .serializers import CategorySerializer, CustomerSerializer
 
-from ..models import Notebook, Smartphone, Category, Customer
+from ..models import Category, Customer
 
 
 class CategoryPagination(PageNumberPagination):
@@ -32,46 +25,6 @@ class CategoryPagination(PageNumberPagination):
             ('previous', self.get_previous_link()),
             ('items', data)
         ]))
-
-
-class NotebookListAPIView(ListAPIView):
-    """Все ноутбуки"""
-    serializer_class = NotebookSerializer
-    queryset = Notebook.objects.all()
-
-
-class SmartphoneListAPIView(ListAPIView):
-    """Все смартфоны"""
-    serializer_class = SmartphoneSerializer
-    queryset = Smartphone.objects.all()
-    # Фильтрация через бекэнд
-    filter_backends = [SearchFilter]
-    search_fields = ['diagonal', 'display_type']
-
-    # # Фильтрация через переопределение работы queryset
-    # def get_queryset(self):
-    #     """Переопределение работы базового queryset"""
-    #     qs = super().get_queryset()  # базовый queryset
-    #     # http://127.0.0.1:8000/api/smartphones/?diagonal=6.1%22&display_type=OLED
-    #     # Для фильтрации через QUERY параметры - query_params.get('price')
-    #     # diagonal=6.1%22 и display_type=OLED - query_params
-    #     diagonal, display_type = (
-    #         self.request.query_params.get('diagonal'),
-    #         self.request.query_params.get('display_type')
-    #     )
-    #     search_params = {
-    #         'diagonal__iexact': diagonal,
-    #         'display_type__iexact': display_type,
-    #     }
-    #     return qs.filter(**search_params)
-
-
-class SmartphoneDetailAPIView(RetrieveAPIView):
-    """Детальная информация о смартфоне"""
-
-    serializer_class = SmartphoneSerializer
-    queryset = Smartphone.objects.all()
-    lookup_field = 'id'
 
 
 class CategoryAPIView(ListCreateAPIView, RetrieveUpdateAPIView):

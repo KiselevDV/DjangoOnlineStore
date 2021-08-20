@@ -1,3 +1,35 @@
 body {
   padding-top: 56px;
 }
+
+/*Авторизация, регистрация*/
+span.navbar span.badge a.mainapp_base {
+  text-decoration: none;
+  color: white;
+  font-size: 14px;
+}
+
+div.mainapp_login {
+  margin-bottom: 300px;
+  margin-top: 180px;
+}
+
+div.mainapp_registration {
+  margin-bottom: 50px;
+  margin-top: 50px;
+}
+
+a.mainapp_logout {
+  color: white;
+  text-decoration: none;
+}
+
+div.mainapp_profile_first {
+  margin-top: 300px;
+  margin-bottom: 300px;
+}
+
+div.mainapp_profile_second {
+  margin-top: 300px;
+  margin-bottom: 300px;
+}

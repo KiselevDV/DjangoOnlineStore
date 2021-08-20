@@ -29,14 +29,14 @@
       <tbody>
       {% for item in cart.products.all %}
         <tr>
-          <th scope="row">{{ item.content_object.title }}</th>
+          <th scope="row">{{ item.product.title }}</th>
           <td class="w-25">
-            <img class="img-fluid" src="{{ item.content_object.image.url }}">
+            <img class="img-fluid" src="{{ item.product.image.url }}">
           </td>
-          <td>{{ item.content_object.price }} руб.</td>
+          <td>{{ item.product.price }} руб.</td>
           <td>
             <form
-                action="{% url 'change_qty' ct_model=item.content_object.get_model_name slug=item.content_object.slug %}"
+                action="{% url 'change_qty' slug=item.product.slug %}"
                 method="post">
               {% csrf_token %}
               <input type="number" class="form-control" name="qty" value="{{ item.qty }}" min="1">
@@ -46,7 +46,7 @@
           </td>
           <td>{{ item.final_price }} руб.</td>
           <td>
-            <a href="{% url 'delete_from_cart' ct_model=item.content_object.get_model_name slug=item.content_object.slug %}">
+            <a href="{% url 'delete_from_cart' slug=item.product.slug %}">
               <button class="btn btn-danger">Удалить из корзины</button>
             </a>
           </td>

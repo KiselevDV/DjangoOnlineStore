@@ -1,94 +1,99 @@
-"""
-mark_safe - превращает обычную строку в HTML тег
-ValidationError - работает только на уровне форм
-"""
-from PIL import Image
-
 from django import forms
-from django.forms import ModelForm, ValidationError
-from django.utils.safestring import mark_safe
+from django.contrib.auth.models import User
+from django.forms import ValidationError
 
-from .models import Product, Order
+from .models import Order
 
 
-class NotebookAdminForm(ModelForm):
-    """Изменение/расширение стандартного поведения модели Notebook в админке"""
+class LoginForm(forms.ModelForm):
+    """Форма входа на сайт"""
+
+    # Скрыть поле password переопределив виджет
+    password = forms.CharField(label='Пароль', widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):
-        """
-        Переопределение метода __init__, добавление строки help_text полю image
-        """
+        """Переписать лейбл на русский"""
         super().__init__(*args, **kwargs)
-        self.fields['image'].help_text = mark_safe(
-            '<span style="color:red; font-size:14px;">'
-            'Загружайте изображения c разрешением не менее - {}x{}. '
-            'При загрузке изображения более {}x{} оно будет обрезано!'
-            '</span>'.format(*Product.MIN_VALID_RESOLUTION,
-                             *Product.MAX_VALID_RESOLUTION)
-        )
-
-    def clean_image(self):
-        """
-        Получение данных поля 'image' и их валидация. Данная логика
-        осуществляется на уровне формы в админке (не в моделях/shell ...)
-        """
-
-        image = self.cleaned_data['image']
-        if image.size > Product.MAX_IMAGE_SIZE:
-            raise ValidationError(
-                'Размер изображения не должен превышать 10 Мб')
-        # т.к. данный тип медиафайл, данные в виде стрима (нет ширины/высоты)
-        # => работаем с экземрляром библиотеки PIL
-
-        # экземпляр img наследует поля класса Image => размер - ширина/высота
-        img = Image.open(image)
-        min_height, min_width = Product.MIN_VALID_RESOLUTION
-        # max_height, max_width = Product.MAX_VALID_RESOLUTION
-        # img.width/img.height - ширина и высота объекта image
-        if img.height < min_height or img.width < min_width:
-            raise ValidationError(
-                'Разрешение изображения меньше минимального!')
-        # if img.height > max_height or img.width > max_width:
-        #     raise ValidationError(
-        #         'Разрешение изображения больше максимального!')
-
-        return image
-
-
-class SmartphoneAdminForm(ModelForm):
-    """
-    Изменение/расширение стандартного поведения модели Smartphone в админке
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(SmartphoneAdminForm, self).__init__(*args, **kwargs)
-        # Получаем экземпляр модели из kwargs
-        instance = kwargs.get('instance')
-        # Если есть экземпляр и поле sd=false (нет флажка), в новых экземплярах
-        # по умолчанию есть (default=True), то обновить поле sd_volume_max
-        if instance and not instance.sd:
-            self.fields['sd_volume_max'].widget.attrs.update({
-                # Поле будет серым и только для чтения
-                'readonly': True, 'style': 'background: lightgray'
-            })
+        self.fields['username'].label = 'Логин'
 
     def clean(self):
-        # Если чекбокс 'sd' пуст (нет флажка), то
-        # поле sd_volume_max тоже будет пустым
-        if not self.cleaned_data['sd']:
-            self.cleaned_data['sd_volume_max'] = None
+        """Валидация пользователя"""
+        username = self.cleaned_data['username']
+        password = self.cleaned_data['password']
+
+        # exists() - наличие данного объекта
+        if not User.objects.filter(username=username).exists():
+            raise ValidationError(
+                f'Пользователь с логином {username} не найден в системе.')
+
+        user = User.objects.get(username=username)
+        if user:
+            if not user.check_password(password):
+                raise ValidationError('Неверный пароль!')
+
         return self.cleaned_data
+
+    class Meta:
+        model = User
+        fields = ('username', 'password')
+
+
+class RegistrationForm(forms.ModelForm):
+    """Регистрация пользователя"""
+
+    password = forms.CharField(label='Пароль', widget=forms.PasswordInput)
+    confirm_password = forms.CharField(
+        label='Подтвердить пароль', widget=forms.PasswordInput)
+    phone = forms.CharField(label='Номер телефона', required=False)
+    address = forms.CharField(label='Адрес', required=False)
+    email = forms.EmailField(label='E-mail', required=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['username'].label = 'Логин'
+        self.fields['first_name'].label = 'Имя'
+        self.fields['last_name'].label = 'Фамилия'
+
+    def clean_email(self):
+        """Вадидация почты"""
+        email = self.cleaned_data['email']
+        domain = email.split('.')[-1]
+        if domain in ['by', 'ru', 'ua', 'kz']:
+            raise ValidationError(
+                f'Регистрация для доменов "{domain}" невозможна')
+        # Проверка уже зарегистрированого пользователя, с таким email
+        if User.objects.filter(email=email).exists():
+            raise ValidationError(
+                f'Данный почтовый адрес уже зарегистрирован в системе!')
+        return email
+
+    def clean_username(self):
+        """Валидация логина"""
+        username = self.cleaned_data['username']
+        if User.objects.filter(username=username).exists():
+            raise ValidationError(
+                f'{username} - данный логин уже используется!')
+        return username
+
+    def clean(self):
+        """Валидация пароля"""
+        password = self.cleaned_data['password']
+        confirm_password = self.cleaned_data['confirm_password']
+        if password != confirm_password:
+            raise ValidationError(f'Пароли не совпадают!')
+        return self.cleaned_data
+
+    class Meta:
+        model = User
+        fields = ('username', 'password', 'confirm_password', 'first_name',
+                  'last_name', 'address', 'phone', 'email')
 
 
 class OrderForm(forms.ModelForm):
     """Форма оформления заказа товаров"""
 
-    def __init__(self, *args, **kwargs):
-        super(OrderForm, self).__init__(*args, **kwargs)
-        self.fields['order_date'].label = 'Дата получения заказа'
-
     order_date = forms.DateField(
-        # label='Дата получения заказа',
+        label='Дата получения заказа',
         widget=forms.TextInput(attrs={'type': 'date'}))
 
     class Meta:
